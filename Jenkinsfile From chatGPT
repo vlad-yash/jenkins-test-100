@@ -1,0 +1,75 @@
+pipeline {
+    agent any // Defines the agent where the pipeline runs (could be any available node)
+
+    environment {
+        APACHE_SERVICE = 'apache2'  // Defining an environment variable for Apache service name for reuse
+    }
+
+    stages {
+        // Stage 1: Update system packages
+        stage('Update') {
+            steps {
+                // Run system update command
+                sh 'sudo apt-get update -y' // Ensures apt package lists are updated
+            }
+        }
+
+        // Stage 2: Install Apache2 web server
+        stage('Install') {
+            steps {
+                // Install apache2 with confirmation (-y flag skips confirmation)
+                sh 'sudo apt-get install apache2 -y'
+            }
+        }
+
+        // Stage 3: Start Apache2 service
+        stage('Start') {
+            steps {
+                // Start Apache2 service using systemctl
+                sh "sudo systemctl start ${env.APACHE_SERVICE}" // Using the environment variable for service name
+            }
+        }
+
+        // Stage 4: Check Apache2 service status
+        stage('Check Status') {
+            steps {
+                // Get status of Apache2 service
+                sh "sudo systemctl status ${env.APACHE_SERVICE} || echo 'Apache service not running'"
+                // If the service isn't running, it will display the message "Apache service not running"
+            }
+        }
+
+        // Stage 5: Check Apache2 version
+        stage('Check Version') {
+            steps {
+                // Check installed version of Apache2
+                sh 'apache2 -v'
+            }
+        }
+
+        // Stage 6: Check for 4xx and 5xx errors in Apache logs
+        stage('Check Errors') {
+            steps {
+                // Searching for 4xx errors in Apache access logs
+                sh "sudo grep ' 4' /var/log/apache2/access.log || echo 'No 4xx errors found'"
+                // Searching for 5xx errors in Apache access logs
+                sh "sudo grep ' 5' /var/log/apache2/access.log || echo 'No 5xx errors found'"
+            }
+        }
+    }
+
+    post {
+        always {
+            // Any actions that should run after the pipeline execution, like cleanup
+            echo 'Pipeline execution finished!'
+        }
+        success {
+            // Actions for successful completion
+            echo 'Pipeline completed successfully.'
+        }
+        failure {
+            // Actions for failed pipeline
+            echo 'Pipeline failed.'
+        }
+    }
+}
